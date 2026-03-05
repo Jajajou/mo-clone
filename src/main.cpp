@@ -1,74 +1,90 @@
 #include <Arduino.h>
+#include <SPI.h>
+#include <Adafruit_ILI9341.h>
 #include "config.h"
-#include "ui/dashboard.h"
-#include "sensors/gps_reader.h"
-#include "sensors/rpm_reader.h"
-#include "control/turn_signal.h"
-#include "control/headlight.h"
 
-// === MOCK DATA (chỉ dùng khi DEBUG_MOCK_DATA = true) ===
-static float mockSpeed   = 0;
-static int   mockRpm     = 0;
-static bool  mockGoingUp = true;
-
-void updateMockData() {
-    // Mô phỏng tăng/giảm tốc độ và vòng tua
-    if (mockGoingUp) {
-        mockSpeed += 1.5f;
-        mockRpm   += 150;
-        if (mockSpeed >= 120) mockGoingUp = false;
-    } else {
-        mockSpeed -= 1.5f;
-        mockRpm   -= 150;
-        if (mockSpeed <= 0) mockGoingUp = true;
-    }
-}
+// Hardware SPI qua Arduino SPI library (khác LovyanGFX dùng IDF-level)
+static Adafruit_ILI9341 tft(&SPI, PIN_TFT_DC, PIN_TFT_CS, PIN_TFT_RST);
 
 void setup() {
-    if (DEBUG_SERIAL) Serial.begin(115200);
+    // Turn signals
+    pinMode(PIN_RELAY_TURN_LEFT,  OUTPUT);
+    pinMode(PIN_RELAY_TURN_RIGHT, OUTPUT);
+    pinMode(PIN_BTN_TURN_LEFT,    INPUT_PULLUP);
+    pinMode(PIN_BTN_TURN_RIGHT,   INPUT_PULLUP);
+    digitalWrite(PIN_RELAY_TURN_LEFT,  LOW);
+    digitalWrite(PIN_RELAY_TURN_RIGHT, LOW);
 
-    // Buttons & relay trước — nếu display treo thì nút vẫn hoạt động
-    turn_signal_init();
-    headlight_init();
-    gps_init();
-    rpm_init();
+    // Headlight
+    pinMode(PIN_RELAY_HEADLIGHT, OUTPUT);
+    pinMode(PIN_BTN_HEADLIGHT,   INPUT_PULLUP);
+    digitalWrite(PIN_RELAY_HEADLIGHT, LOW);
 
-    // Display và LVGL sau cùng
-    dashboard_init();
+    // Backlight
+    pinMode(PIN_TFT_BL, OUTPUT);
+    digitalWrite(PIN_TFT_BL, HIGH);
+
+    // Display — hardware SPI, MOSI=11 SCK=12 là default FSPI của ESP32-S3
+    SPI.begin(PIN_TFT_SCLK, -1, PIN_TFT_MOSI, PIN_TFT_CS);
+    tft.begin();
+    tft.setRotation(0);
+    tft.fillScreen(ILI9341_BLUE);
+    tft.setTextColor(ILI9341_WHITE);
+    tft.setTextSize(3);
+    tft.setCursor(60, 100);
+    tft.println("MO.UNIT");
+    tft.setTextSize(2);
+    tft.setCursor(50, 150);
+    tft.println("WORKING!");
 }
 
+static bool left_on  = false;
+static bool right_on = false;
+static bool blink_state = false;
+static bool high_beam   = false;
+
+static unsigned long last_blink = 0;
+static bool prev_left  = HIGH;
+static bool prev_right = HIGH;
+static bool prev_beam  = HIGH;
+
 void loop() {
-    // Cấp tick thời gian cho LVGL (bắt buộc để animate)
-    static uint32_t last_tick = 0;
-    uint32_t now = millis();
-    lv_tick_inc(now - last_tick);
-    last_tick = now;
+    unsigned long now = millis();
 
-    // LVGL render
-    lv_timer_handler();
+    // Đọc nút
+    bool cur_left  = digitalRead(PIN_BTN_TURN_LEFT);
+    bool cur_right = digitalRead(PIN_BTN_TURN_RIGHT);
+    bool cur_beam  = digitalRead(PIN_BTN_HEADLIGHT);
 
-    // Cập nhật GPS
-    gps_update();
+    // Xi nhan trái — toggle khi nhấn
+    if (prev_left == HIGH && cur_left == LOW) {
+        right_on = false;
+        left_on  = !left_on;
+        delay(50); // debounce đơn giản
+    }
+    // Xi nhan phải
+    if (prev_right == HIGH && cur_right == LOW) {
+        left_on  = false;
+        right_on = !right_on;
+        delay(50);
+    }
+    // Đèn pha
+    if (prev_beam == HIGH && cur_beam == LOW) {
+        high_beam = !high_beam;
+        digitalWrite(PIN_RELAY_HEADLIGHT, high_beam ? HIGH : LOW);
+        delay(50);
+    }
 
-    // Đọc dữ liệu và đẩy lên màn hình
-    #if DEBUG_MOCK_DATA
-        static unsigned long lastMock = 0;
-        if (millis() - lastMock > 50) {
-            lastMock = millis();
-            updateMockData();
-            dashboard_set_speed((int)mockSpeed);
-            dashboard_set_rpm(mockRpm);
-            dashboard_set_gps(10.776889f, 106.700806f); // Mock: TP.HCM
-        }
-    #else
-        dashboard_set_speed(gps_get_speed_kmh());
-        dashboard_set_rpm(rpm_get());
-        dashboard_set_gps(gps_get_lat(), gps_get_lng());
-    #endif
+    prev_left  = cur_left;
+    prev_right = cur_right;
+    prev_beam  = cur_beam;
 
-    // Xử lý nút bấm xi nhan
-    turn_signal_update();
-    headlight_update();
+    // Nhấp nháy xi nhan mỗi 500ms
+    if (now - last_blink >= 500) {
+        last_blink  = now;
+        blink_state = !blink_state;
+    }
 
-    delay(5);
+    digitalWrite(PIN_RELAY_TURN_LEFT,  (left_on  && blink_state) ? HIGH : LOW);
+    digitalWrite(PIN_RELAY_TURN_RIGHT, (right_on && blink_state) ? HIGH : LOW);
 }
