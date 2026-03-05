@@ -3,10 +3,14 @@
 #include "../config.h"
 #include "../ui/dashboard.h"
 
-static bool left_on  = false;
-static bool right_on = false;
+static bool left_on   = false;
+static bool right_on  = false;
 static bool blink_state = false;
-static unsigned long last_blink = 0;
+static unsigned long last_blink   = 0;
+static unsigned long last_btn_left  = 0; // Debounce không blocking
+static unsigned long last_btn_right = 0;
+static bool prev_left  = HIGH;
+static bool prev_right = HIGH;
 
 void turn_signal_init() {
     pinMode(PIN_RELAY_TURN_LEFT,  OUTPUT);
@@ -19,17 +23,24 @@ void turn_signal_init() {
 }
 
 void turn_signal_update() {
-    // Đọc nút bấm (active LOW qua optocoupler)
-    if (digitalRead(PIN_BTN_TURN_LEFT) == LOW) {
+    unsigned long now = millis();
+
+    // Debounce không blocking — chỉ kích hoạt khi nhả ra (falling edge + 50ms trôi qua)
+    bool cur_left  = digitalRead(PIN_BTN_TURN_LEFT);
+    bool cur_right = digitalRead(PIN_BTN_TURN_RIGHT);
+
+    if (prev_left == HIGH && cur_left == LOW && now - last_btn_left > 50) {
+        last_btn_left = now;
         right_on = false;
-        left_on  = !left_on; // Toggle
-        delay(200); // Debounce đơn giản
+        left_on  = !left_on;
     }
-    if (digitalRead(PIN_BTN_TURN_RIGHT) == LOW) {
+    if (prev_right == HIGH && cur_right == LOW && now - last_btn_right > 50) {
+        last_btn_right = now;
         left_on  = false;
         right_on = !right_on;
-        delay(200);
     }
+    prev_left  = cur_left;
+    prev_right = cur_right;
 
     // Xử lý nhấp nháy theo chu kỳ TURN_BLINK_MS
     if (millis() - last_blink >= TURN_BLINK_MS) {

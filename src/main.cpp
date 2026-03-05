@@ -27,11 +27,14 @@ void updateMockData() {
 void setup() {
     if (DEBUG_SERIAL) Serial.begin(115200);
 
-    dashboard_init();   // Khởi động màn hình + LVGL
-    gps_init();         // Khởi động GPS (UART2)
-    rpm_init();         // Gắn interrupt đếm xung bô-bin
-    turn_signal_init(); // Khởi động relay xi nhan
-    headlight_init();   // Khởi động relay đèn pha
+    // Buttons & relay trước — nếu display treo thì nút vẫn hoạt động
+    turn_signal_init();
+    headlight_init();
+    gps_init();
+    rpm_init();
+
+    // Display và LVGL sau cùng
+    dashboard_init();
 }
 
 void loop() {

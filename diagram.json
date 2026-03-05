@@ -69,13 +69,14 @@
     }
   ],
   "connections": [
-    ["esp:GND.1", "lcd:GND", "black", []],
-    ["esp:3V3",   "lcd:VCC", "red",   []],
-    ["esp:11",    "lcd:MOSI","green", []],
-    ["esp:12",    "lcd:SCK", "yellow",[]],
-    ["esp:10",    "lcd:CS",  "orange",[]],
-    ["esp:9",     "lcd:DC",  "blue",  []],
-    ["esp:8",     "lcd:RST", "purple",[]],
+    ["esp:GND.1", "lcd:GND",  "black",  []],
+    ["esp:3V3",   "lcd:VCC",  "red",    []],
+    ["esp:3V3",   "lcd:LED",  "red",    []],
+    ["esp:11",    "lcd:MOSI", "green",  []],
+    ["esp:12",    "lcd:CLK",  "yellow", []],
+    ["esp:10",    "lcd:CS",   "orange", []],
+    ["esp:9",     "lcd:DC",   "blue",   []],
+    ["esp:8",     "lcd:RST",  "purple", []],
 
     ["esp:38",    "btn_left:1.l",  "green", []],
     ["esp:GND.2", "btn_left:2.l",  "black", []],
