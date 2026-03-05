@@ -1,0 +1,94 @@
+{
+  "version": 1,
+  "author": "mo.unit-clone",
+  "editor": "wokwi",
+  "parts": [
+    {
+      "id": "esp",
+      "type": "board-esp32-s3-devkitc-1",
+      "top": 0,
+      "left": 0,
+      "attrs": {}
+    },
+    {
+      "id": "lcd",
+      "type": "wokwi-ili9341",
+      "top": -180,
+      "left": 280,
+      "attrs": { "color": "black" }
+    },
+    {
+      "id": "gps",
+      "type": "wokwi-arduino-nano",
+      "top": 220,
+      "left": 280,
+      "attrs": {},
+      "notes": "Dùng Nano giả lập GPS — gửi NMEA sentence qua Serial"
+    },
+    {
+      "id": "btn_left",
+      "type": "wokwi-pushbutton",
+      "top": 300,
+      "left": -80,
+      "attrs": { "color": "green", "label": "Xi nan trai" }
+    },
+    {
+      "id": "btn_right",
+      "type": "wokwi-pushbutton",
+      "top": 360,
+      "left": -80,
+      "attrs": { "color": "green", "label": "Xi nan phai" }
+    },
+    {
+      "id": "btn_beam",
+      "type": "wokwi-pushbutton",
+      "top": 420,
+      "left": -80,
+      "attrs": { "color": "yellow", "label": "Den pha" }
+    },
+    {
+      "id": "led_left",
+      "type": "wokwi-led",
+      "top": 300,
+      "left": 500,
+      "attrs": { "color": "green", "label": "Xi nan trai" }
+    },
+    {
+      "id": "led_right",
+      "type": "wokwi-led",
+      "top": 360,
+      "left": 500,
+      "attrs": { "color": "green", "label": "Xi nan phai" }
+    },
+    {
+      "id": "led_beam",
+      "type": "wokwi-led",
+      "top": 420,
+      "left": 500,
+      "attrs": { "color": "blue", "label": "Den pha" }
+    }
+  ],
+  "connections": [
+    ["esp:GND.1", "lcd:GND", "black", []],
+    ["esp:3V3",   "lcd:VCC", "red",   []],
+    ["esp:11",    "lcd:MOSI","green", []],
+    ["esp:12",    "lcd:SCK", "yellow",[]],
+    ["esp:10",    "lcd:CS",  "orange",[]],
+    ["esp:9",     "lcd:DC",  "blue",  []],
+    ["esp:8",     "lcd:RST", "purple",[]],
+
+    ["esp:38",    "btn_left:1.l",  "green", []],
+    ["esp:GND.2", "btn_left:2.l",  "black", []],
+    ["esp:39",    "btn_right:1.l", "green", []],
+    ["esp:GND.3", "btn_right:2.l", "black", []],
+    ["esp:40",    "btn_beam:1.l",  "yellow",[]],
+    ["esp:GND.4", "btn_beam:2.l",  "black", []],
+
+    ["esp:5",     "led_left:A",   "green", []],
+    ["esp:GND.5", "led_left:C",   "black", []],
+    ["esp:6",     "led_right:A",  "green", []],
+    ["esp:GND.6", "led_right:C",  "black", []],
+    ["esp:4",     "led_beam:A",   "blue",  []],
+    ["esp:GND.7", "led_beam:C",   "black", []]
+  ]
+}

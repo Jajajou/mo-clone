@@ -1,0 +1,65 @@
+#include <Arduino.h>
+#include "config.h"
+#include "ui/dashboard.h"
+#include "sensors/gps_reader.h"
+#include "sensors/rpm_reader.h"
+#include "control/turn_signal.h"
+#include "control/headlight.h"
+
+// === MOCK DATA (chỉ dùng khi DEBUG_MOCK_DATA = true) ===
+static float mockSpeed   = 0;
+static int   mockRpm     = 0;
+static bool  mockGoingUp = true;
+
+void updateMockData() {
+    // Mô phỏng tăng/giảm tốc độ và vòng tua
+    if (mockGoingUp) {
+        mockSpeed += 1.5f;
+        mockRpm   += 150;
+        if (mockSpeed >= 120) mockGoingUp = false;
+    } else {
+        mockSpeed -= 1.5f;
+        mockRpm   -= 150;
+        if (mockSpeed <= 0) mockGoingUp = true;
+    }
+}
+
+void setup() {
+    if (DEBUG_SERIAL) Serial.begin(115200);
+
+    dashboard_init();   // Khởi động màn hình + LVGL
+    gps_init();         // Khởi động GPS (UART2)
+    rpm_init();         // Gắn interrupt đếm xung bô-bin
+    turn_signal_init(); // Khởi động relay xi nhan
+    headlight_init();   // Khởi động relay đèn pha
+}
+
+void loop() {
+    // LVGL cần được gọi liên tục để render
+    lv_timer_handler();
+
+    // Cập nhật GPS
+    gps_update();
+
+    // Đọc dữ liệu và đẩy lên màn hình
+    #if DEBUG_MOCK_DATA
+        static unsigned long lastMock = 0;
+        if (millis() - lastMock > 50) {
+            lastMock = millis();
+            updateMockData();
+            dashboard_set_speed((int)mockSpeed);
+            dashboard_set_rpm(mockRpm);
+            dashboard_set_gps(10.776889f, 106.700806f); // Mock: TP.HCM
+        }
+    #else
+        dashboard_set_speed(gps_get_speed_kmh());
+        dashboard_set_rpm(rpm_get());
+        dashboard_set_gps(gps_get_lat(), gps_get_lng());
+    #endif
+
+    // Xử lý nút bấm xi nhan
+    turn_signal_update();
+    headlight_update();
+
+    delay(5);
+}
