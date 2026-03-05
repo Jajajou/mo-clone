@@ -35,7 +35,13 @@ void setup() {
 }
 
 void loop() {
-    // LVGL cần được gọi liên tục để render
+    // Cấp tick thời gian cho LVGL (bắt buộc để animate)
+    static uint32_t last_tick = 0;
+    uint32_t now = millis();
+    lv_tick_inc(now - last_tick);
+    last_tick = now;
+
+    // LVGL render
     lv_timer_handler();
 
     // Cập nhật GPS
